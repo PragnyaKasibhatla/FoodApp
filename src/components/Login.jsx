@@ -1,94 +1,196 @@
-import React, { useState } from "react";
+import React, { Component } from "react";
 import Register from "./Register";
-import Orders from "./Orders";
-import { Router,Link,Routes,Route } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useHistory } from "history";
+//const history = createBrowserHistory();
 
-function Login() {
-  // React States
-  const [errorMessages, setErrorMessages] = useState({});
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const[isNewUser,setIsNewUser] = useState(false);
+class Login extends Component {
+  constructor(props) {
+    super(props);
+    this.handleSubmit = this.handleSubmit.bind(this);
+    this.state = {
+      users: [],
+      email: "",
+      password: "",
+      UserType: "customer",
+      RegisterUserType: "customer",
+      formErrors: { email: "", password: "" },
+      emailValid: false,
+      passwordValid: false,
+      formValid: false,
+      loggedIn: false,
+    };
+  }
 
-  // User Login info
-  const database = [
-    {
-      username: "Pragnya",
-      password: "prajju"
-    },
-    {
-      username: "Siri",
-      password: "siri"
-    }
-  ];
-
-  const errors = {
-    uname: "invalid username",
-    pass: "invalid password"
+  handleUserInput = (e) => {
+    const name = e.target.name;
+    const value = e.target.value;
+    this.setState({ [name]: value }, () => {
+      this.validateField(name, value);
+    });
   };
 
-  const handleSubmit = (event) => {
-    //Prevent page reload
-    event.preventDefault();
+  onValueChange = (e) => {
+    this.setState({
+      UserType: e.target.value,
+    });
+  };
 
-    var { uname, pass } = document.forms[0];
+  validateField(fieldName, value) {
+    let fieldValidationErrors = this.state.formErrors;
+    let emailValid = this.state.emailValid;
+    let passwordValid = this.state.passwordValid;
 
-    // Find user login info
-    const userData = database.find((user) => user.username === uname.value);
+    switch (fieldName) {
+      case "email":
+        emailValid = value.match(/^([\w.%+-]+)@([\w-]+\.)+([\w]{2,3})$/i);
+        fieldValidationErrors.email = emailValid ? "" : " is invalid";
+        break;
+      case "password":
+        passwordValid = value.length >= 6;
+        fieldValidationErrors.password = passwordValid ? "" : " is too short";
+        break;
+      default:
+        break;
+    }
+    this.setState(
+      {
+        formErrors: fieldValidationErrors,
+        emailValid: emailValid,
+        passwordValid: passwordValid,
+      },
+      this.validateForm
+    );
+  }
 
-    // Compare user info
-    if
-     (userData) {
-      if (userData.password !== pass.value) {
-        // Invalid password
-        setErrorMessages({ name: "pass", message: errors.pass });
+  validateForm() {
+    this.setState({
+      formValid: this.state.emailValid && this.state.passwordValid,
+    });
+  }
+
+  errorClass(error) {
+    return error.length === 0 ? "" : "has-error";
+  }
+
+  handleClick = (e) => {
+    //this.props.history.push("/registration");
+    e.preventDefault();
+  };
+  handleSubmit = (e) => {
+    //const { navigate } = useLocation();
+    //const navigate = useNavigate();
+    //var apiBaseUrl = "http://localhost:8000/api/authentication/";
+    console.log(this.props);
+    console.log(this.state);
+    const { history } = this.props;
+    var self = this;
+    var payload = {
+      email: this.state.email,
+      password: this.state.password,
+      role: this.state.UserType,
+    };
+    //const navigate = useNavigate();
+    let registerUsers = JSON.parse(localStorage.getItem("Users"));
+    if (registerUsers) {
+      let emailToMatch = this.state.email;
+      let userRoleToMatch = this.state.UserType;
+      function matchEmail(user) {
+        return emailToMatch === user.email;
+      }
+      let index = registerUsers.findIndex(matchEmail);
+      if (index === -1) {
+        alert("User Does Not Exist");
       } else {
-        setIsSubmitted(true);
+        if (
+          this.state.password === registerUsers[index].password &&
+          userRoleToMatch === registerUsers[index].role
+        ) {
+          if (userRoleToMatch === "customer") {
+            alert("Success - Customer");
+          } else {
+            alert("Success - Retaurent");
+            //const { history } = this.props;
+            //this.history.push("/RestaurentOwner");
+            //navigate("/RestaurentOwner");
+            //this.props.navigation("/RestaurentOwner");
+            this.props.history.push("/RestaurentOwner");
+            this.setState({ loggedIn: true });
+          }
+        } else {
+          alert("Password Mismatch");
+        }
       }
     } else {
-      // Username not found
-      setErrorMessages({ name: "uname", message: errors.uname });
+      alert("User Does Not Exist");
     }
+    e.preventDefault();
   };
 
-  // Generate JSX code for error message
-  const renderErrorMessage = (name) =>
-    name === errorMessages.name && (
-      <div className="error">{errorMessages.message}</div>
-    );
-    
-    function register(){
-      setIsNewUser(true);
-    }
-
-  // JSX code for login form
-  const renderForm = (
-    <div className="container">
-    <div>
-        {isNewUser?<Register/>: <div>
-        <form className="form">
-          <h1>Sign In</h1>
-          <input type="text" name="uname" placeholder="Username"required />
-          {renderErrorMessage("uname")}
-          <input type="password" name="pass" placeholder="Password"required />
-          {renderErrorMessage("pass")}
-        <button type="submit" onClick={handleSubmit}>Login</button>
-      </form>
-      <span >
-        New User?
-          <Link onClick={register}>Register</Link>
-      </span>
-        </div>}
-      </div>
-    </div>
-  );
-
-  return (
+  render() {
+    return (
       <div>
-        {isSubmitted ? 
-            <div><Orders/></div>
-         : renderForm}
-      </div>
-  );
-}
+        <fieldset>
+          <form className="demoForm" onSubmit={this.handleSubmit}>
+            <legend>Login</legend>
 
+            <div>
+              <input
+                type="email"
+                required
+                name="email"
+                placeholder="Email"
+                value={this.state.email}
+                onChange={this.handleUserInput}
+              />
+            </div>
+
+            <div>
+              <input
+                type="password"
+                name="password"
+                placeholder="Password"
+                value={this.state.password}
+                onChange={this.handleUserInput}
+              />
+            </div>
+
+            <div>
+              <input
+                type="radio"
+                value="customer"
+                checked={this.state.UserType === "customer"}
+                onChange={this.onValueChange}
+              />
+              <label htmlFor="Customer">Customer</label>
+              <input
+                type="radio"
+                value="restaurant"
+                checked={this.state.UserType === "restaurant"}
+                onChange={this.onValueChange}
+              />
+              <label htmlFor="Restaurant">Restaurant</label>
+            </div>
+            <input
+              type="submit"
+              value="Login"
+              disabled={!this.state.formValid}
+            />
+
+            <div className="error-message"></div>
+          </form>
+
+          <div>
+            <Link to="/Register">Register</Link>
+            {/*               <form className="demoForm" onSubmit={this.handleClick}>
+                <label htmlFor="Registration">New User? Register Now</label>
+
+                <input type="submit" value="Register" />
+              </form> */}
+          </div>
+        </fieldset>
+      </div>
+    );
+  }
+}
 export default Login;
